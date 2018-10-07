@@ -1,13 +1,19 @@
 import { OfflineMail } from "./OfflineMail.js";
 
+const {
+  Grid,
+  Row,
+  Col,
+} = window.ReactBootstrap;
+
 class Index extends React.PureComponent {
   render(){
-    return React.createElement(
-      "div", {}, [
-        React.createElement("h1", { key: 0 }, "Offline Mail"),
-        React.createElement(OfflineMail, { key: 1 }),
+    return React.createElement(Grid, {}, React.createElement(
+      Row, {}, [
+        React.createElement(Col, { key: 0, xs: 12 }, React.createElement("h1", {}, "Offline Mail")),
+        React.createElement(Col, { key: 1, xs: 12 }, React.createElement(OfflineMail)),
       ]
-    );
+    ));
   }
 }
 

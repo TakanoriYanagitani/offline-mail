@@ -1,6 +1,6 @@
 {
   "name": "offline-mail",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "View mails stored in indexedDB",
   "main": "index.js",
   "scripts": {

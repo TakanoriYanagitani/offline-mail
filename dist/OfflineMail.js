@@ -68,7 +68,7 @@ const initialize = {
   gmail: initializeGmailDb,
 };
 
-const commonVersion = 0x1809;
+const commonVersion = 0x180c;
 
 const initializeMailProvider = event => {
   const { target } = event || {};
@@ -258,7 +258,7 @@ class OfflineMail extends React.PureComponent {
     .then(request => new Promise(opened => {
       request.onsuccess = opened;
       request.onerror = opened;
-      request.onupgradeneeded = initialize[state.initial_provider];
+      request.onupgradeneeded = initialize[state.initial_provider && state.initial_provider.name];
     }))
     .then(event => {
       const { target } = event || {};
@@ -297,7 +297,6 @@ class OfflineMail extends React.PureComponent {
         Object.assign(state, { top_rows });
         return setState(state);
       })
-      .then(set => console.log(this.state))
       ;
     })
     ;

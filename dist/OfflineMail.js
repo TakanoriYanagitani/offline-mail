@@ -7,6 +7,8 @@ const {
   FormControl,
   ListGroup,
   ListGroupItem,
+  Button,
+  Modal,
 } = window.ReactBootstrap;
 
 const populateSample = messages => {
@@ -101,7 +103,7 @@ const initializeMailProvider = event => {
 class ProviderSelect extends React.PureComponent {
   render(){
     const { provider_list } = this.props;
-    return React.createElement(
+    return React.createElement(Col, { xs: 12 }, React.createElement(
       FormGroup, { controlId: "provider-select" }, [
         React.createElement(ControlLabel, { key: 0 }, "Select Email Provider"),
         React.createElement(FormControl,  { key: 1, componentClass: "select", placeholder: "gmail" }, (provider_list || []).map(
@@ -110,7 +112,302 @@ class ProviderSelect extends React.PureComponent {
           )
         )),
       ]
+    ));
+  }
+}
+
+class ImportAfter extends React.PureComponent {
+  render(){
+    const {
+      value,
+      onAfterChange,
+    } = this.props;
+    const onChange = onAfterChange;
+    return React.createElement(
+      FormGroup, {}, [
+        React.createElement(ControlLabel, { key: 0 }, "Mail Date Lower Bound"),
+        React.createElement(Datetime,     { key: 1, onChange, closeOnSelect: true, timeFormat: false, value }),
+    ]);
+  }
+}
+
+class ImportBefore extends React.PureComponent {
+  render(){
+    const {
+      value,
+      onBeforeChange,
+    } = this.props;
+    const onChange = onBeforeChange;
+    return React.createElement(
+      FormGroup, {}, [
+        React.createElement(ControlLabel, { key: 0 }, "Mail Date Upper Bound"),
+        React.createElement(Datetime,     { key: 1, onChange, closeOnSelect: true, timeFormat: false, value }),
+    ]);
+  }
+}
+
+const gmailInitialize = () => window.gapi && window.gapi.client && window.gapi.client.init && window.gapi.client.init({
+  apiKey:   getGmailApiKey(),
+  clientId: getGmailClientId(),
+  discoveryDocs: [ "https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest" ],
+  scope: "https://www.googleapis.com/auth/gmail.readonly",
+});
+
+class GApiAvailable extends React.PureComponent {
+  render(){
+    return React.createElement(
+      "dl", {}, [
+        React.createElement("dt", { key: 0 }, "GApi Available"),
+        React.createElement("dd", { key: 1 }, !! window.gapi ? "OK" : "NG"),
+      ]
     );
+  }
+}
+
+class GApiClientAvailable extends React.PureComponent {
+  render(){
+    const { client_auth2_loaded } = this.props;
+    return React.createElement(
+      "dl", {}, [
+        React.createElement("dt", { key: 0 }, "GApi Client Available"),
+        React.createElement("dd", { key: 1 }, !! client_auth2_loaded ? "OK" : "NG"),
+      ]
+    );
+  }
+}
+
+const setGmailApi    = key => localStorage.setItem("gmail-api-key", key);
+const getGmailApiKey = ()  => localStorage.getItem("gmail-api-key");
+
+const setGmailClientId = key => localStorage.setItem("gmail-client-id", key);
+const getGmailClientId = ()  => localStorage.getItem("gmail-client-id");
+
+class GMailApiKeyGet extends React.PureComponent {
+  render(){
+    const { onSet } = this.props;
+    const onClick = e => {
+      const got = window.prompt(
+        "Paste your GMail Api Key and save to localStorage."
+      );
+      setGmailApi(got);
+      onSet();
+    };
+    return React.createElement(
+      Button, { onClick }, "Set GMail Api Key"
+    );
+  }
+}
+
+class GMailApiKey extends React.PureComponent {
+  render(){
+    const { onSet, api_set } = this.props;
+    const apiKey = getGmailApiKey();
+    return React.createElement(
+      "dl", {}, [
+        React.createElement("dt", { key: 0 }, "GMail API Key"),
+        React.createElement("dd", { key: 1 }, !! api_set
+          ? "OK"
+          : React.createElement(GMailApiKeyGet,   { onSet })
+        ),
+      ]
+    );
+  }
+}
+
+class GMailClientIdGet extends React.PureComponent {
+  render(){
+    const { onSet } = this.props;
+    const onClick = e => {
+      const got = window.prompt(
+        "Paste your GMail Client ID and save to localStorage."
+      );
+      setGmailClientId(got);
+      onSet();
+    };
+    return React.createElement(
+      Button, { onClick }, "Set GMail Client ID"
+    );
+  }
+}
+
+class GMailClientId extends React.PureComponent {
+  render(){
+    const { onSet, client_set } = this.props;
+    const clientId = getGmailClientId();
+    return React.createElement(
+      "dl", {}, [
+        React.createElement("dt", { key: 0 }, "GMail Client ID"),
+        React.createElement("dd", { key: 1 }, !! client_set
+          ? "OK"
+          : React.createElement(GMailClientIdGet,   { onSet })
+        ),
+      ]
+    );
+  }
+}
+
+class ImportReset extends React.PureComponent {
+  render(){
+    const { onSet, onReset} = this.props;
+    const onClick = () => {
+      setGmailApi("");
+      setGmailClientId("");
+      onReset();
+      onSet();
+    };
+    return React.createElement(
+      Button, { onClick }, "Reset"
+    );
+  }
+}
+
+class ImportButton extends React.PureComponent {
+  render(){
+    const {
+      is_signed_in,
+      updateSigninStatus,
+    } = this.props;
+    const onClick = () => {
+      gmailInitialize()
+      .then(initialized =>
+        window.gapi &&
+        window.gapi.auth2 &&
+        window.gapi.auth2.getAuthInstance &&
+        window.gapi.auth2.getAuthInstance(
+      ).isSignedIn.listen(updateSigninStatus))
+      ;
+    };
+    const onAuth = () => {
+      gmailInitialize()
+      .then(initialized =>
+        window.gapi &&
+        window.gapi.auth2 &&
+        window.gapi.auth2.getAuthInstance &&
+        window.gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus) &&
+        window.gapi.auth2.getAuthInstance().signIn()
+      )
+      .catch(console.log)
+      ;
+    };
+    return React.createElement(Row, {}, [
+      React.createElement(Col, { key: 0, xs: 12, sm: 2 }, React.createElement(Button, { onClick: onAuth  }, "Authorize")),
+      React.createElement(Col, { key: 1, xs: 12, sm: 2 }, React.createElement(Button, { onClick }, "Import")),
+      React.createElement(Col, { key: 2, xs: 12        }, React.createElement(
+        "dl", {}, [
+          React.createElement("dt", { key: 0 }, "Is Signed In"),
+          React.createElement("dd", { key: 1 }, is_signed_in ? "Yes" : "No"),
+        ]
+      )),
+    ]);
+  }
+}
+
+class ImportForm extends React.PureComponent {
+  constructor(props){
+    super(props);
+    this.state = {
+      after:  moment().add(-1, "days"),
+      before: moment(),
+      client_auth2_loaded: window.gapi && window.gapi.client,
+      api_set: !! getGmailApiKey(),
+      client_set: !! getGmailClientId(),
+      is_signed_in: false,
+    };
+  }
+
+  componentDidMount(){
+    const initializeClient = () => {
+      this.setState({client_auth2_loaded: window.gapi && window.gapi.client});
+    };
+    return window.gapi && window.gapi.load && window.gapi.load(
+      "client:auth2",
+      initializeClient
+    );
+  }
+
+  render(){
+    const {
+      after,
+      before,
+      client_auth2_loaded,
+      api_set,
+      client_set,
+      is_signed_in,
+    } = this.state;
+    const onAfterChange  = m => this.setState({ after:  m });
+    const onBeforeChange = m => this.setState({ before: m });
+    const onReset = () => {
+      this.setState({
+        after:  moment().add(-1, "days"),
+        before: moment(),
+        api_set: !! getGmailApiKey(),
+        client_set: !! getGmailClientId(),
+      });
+    };
+
+    const updateSigninStatus = () => this.setState({
+      is_signed_in:
+        window.gapi
+        && window.gapi.auth2
+        && window.gapi.auth2.getAuthInstance
+        && window.gapi.auth2.getAuthInstance().isSignedIn.get()
+    });
+
+    const onSet = () => {
+      this.setState({
+        api_set: !! getGmailApiKey(),
+        client_set: !! getGmailClientId(),
+      });
+    };
+    return React.createElement(Row, {}, [
+      React.createElement(Col, { key: 0, xs: 12        }, React.createElement(ImportButton, { is_signed_in, updateSigninStatus })),
+      React.createElement(Col, { key: 1, xs: 12, lg: 6 }, React.createElement(ImportAfter,  { value: after,  onAfterChange  } )),
+      React.createElement(Col, { key: 2, xs: 12, lg: 6 }, React.createElement(ImportBefore, { value: before, onBeforeChange } )),
+      React.createElement(Col, { key: 3, xs: 12, lg: 6 }, React.createElement(GApiAvailable)),
+      React.createElement(Col, { key: 4, xs: 12, lg: 6 }, React.createElement(GApiClientAvailable, { client_auth2_loaded })),
+      React.createElement(Col, { key: 5, xs: 12, lg: 6 }, React.createElement(GMailApiKey,   { onSet, api_set })),
+      React.createElement(Col, { key: 6, xs: 12, lg: 6 }, React.createElement(GMailClientId, { onSet, client_set })),
+      React.createElement(Col, { key: 7, xs: 12        }, React.createElement(ImportReset, { onSet, onReset })),
+    ]);
+  }
+}
+
+class ImportMail extends React.PureComponent {
+  constructor(props){
+    super(props);
+    this.state = {
+      show: false,
+    };
+  }
+
+  render(){
+    const disabled = false;
+    const onClick = e => this.setState({ show: true, disabled: true });
+    const { show } = this.state;
+    const onHide = e => this.setState({ show: false, disabled: false });
+    return React.createElement(Col, { xs: 12 }, React.createElement(
+      FormGroup, {}, [
+        React.createElement(
+          Button, {
+            key: 0,
+            bsStyle: "primary",
+            onClick,
+            disabled,
+          }, "Import"
+        ),
+        React.createElement(
+          Modal,
+          {
+            key: 1,
+            show,
+            onHide,
+          }, [
+            React.createElement(Modal.Header, { key: 0, closeButton: true }, React.createElement(Modal.Title, {}, "Import Mail")),
+            React.createElement(Modal.Body,   { key: 1 }, React.createElement(ImportForm)),
+          ]
+        ),
+      ]
+    ));
   }
 }
 
@@ -118,9 +415,10 @@ class MailViewForm extends React.PureComponent {
   render(){
     const { provider_list } = this.props;
     return React.createElement(
-      "form", {}, [
+      "form", {}, React.createElement(Row, {}, [
         React.createElement(ProviderSelect, { key: 0, provider_list }),
-      ]
+        React.createElement(ImportMail,     { key: 1 }),
+      ])
     );
   }
 }
@@ -192,8 +490,7 @@ class MailViewRows extends React.PureComponent {
 class OfflineMail extends React.PureComponent {
   constructor(props){
     super(props);
-    this.setState({
-    });
+    this.state = {};
   }
 
   componentDidMount(){

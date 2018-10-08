@@ -286,7 +286,7 @@ class ImportButton extends React.PureComponent {
         window.gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus) &&
         window.gapi.auth2.getAuthInstance().signIn()
       )
-      .catch(console.log)
+      .then(updateSigninStatus)
       ;
     };
     return React.createElement(Row, {}, [
@@ -302,6 +302,12 @@ class ImportButton extends React.PureComponent {
   }
 }
 
+const g_isSignedIn = () => window.gapi
+  && window.gapi.auth2
+  && window.gapi.auth2.getAuthInstance
+  && window.gapi.auth2.getAuthInstance().isSignedIn.get()
+;
+
 class ImportForm extends React.PureComponent {
   constructor(props){
     super(props);
@@ -311,13 +317,22 @@ class ImportForm extends React.PureComponent {
       client_auth2_loaded: window.gapi && window.gapi.client,
       api_set: !! getGmailApiKey(),
       client_set: !! getGmailClientId(),
-      is_signed_in: false,
+      is_signed_in: "checking...",
     };
   }
 
   componentDidMount(){
     const initializeClient = () => {
       this.setState({client_auth2_loaded: window.gapi && window.gapi.client});
+      gmailInitialize()
+      .then(initialized =>
+        window.gapi &&
+        window.gapi.auth2 &&
+        window.gapi.auth2.getAuthInstance &&
+        window.gapi.auth2.getAuthInstance().isSignedIn.get()
+      )
+      .then(is_signed_in => this.setState({ is_signed_in }))
+      ;
     };
     return window.gapi && window.gapi.load && window.gapi.load(
       "client:auth2",
@@ -346,11 +361,7 @@ class ImportForm extends React.PureComponent {
     };
 
     const updateSigninStatus = () => this.setState({
-      is_signed_in:
-        window.gapi
-        && window.gapi.auth2
-        && window.gapi.auth2.getAuthInstance
-        && window.gapi.auth2.getAuthInstance().isSignedIn.get()
+      is_signed_in: g_isSignedIn(),
     });
 
     const onSet = () => {

@@ -1,4 +1,4 @@
-import { OfflineMail } from "./OfflineMail.js?ts=io7jp";
+import { OfflineMail } from "./OfflineMail.js?ts=io9bc";
 
 const {
   Grid,

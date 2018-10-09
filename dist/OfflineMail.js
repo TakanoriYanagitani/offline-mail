@@ -266,15 +266,25 @@ class ImportButton extends React.PureComponent {
     const {
       is_signed_in,
       updateSigninStatus,
+      after,
+      before,
     } = this.props;
     const onClick = () => {
-      gmailInitialize()
-      .then(initialized =>
-        window.gapi &&
-        window.gapi.auth2 &&
-        window.gapi.auth2.getAuthInstance &&
-        window.gapi.auth2.getAuthInstance(
-      ).isSignedIn.listen(updateSigninStatus))
+      return window.gapi
+        && window.gapi.client
+        && window.gapi.client.gmail
+        && window.gapi.client.gmail.users
+        && window.gapi.client.gmail.users.messages
+        && window.gapi.client.gmail.users.messages.list
+        && window.gapi.client.gmail.users.messages.list({
+          userId: "me",
+          maxResults: 10,
+          q: [
+            "before:" + before.format("YYYY/MM/DD"),
+            "after:"  +  after.format("YYYY/MM/DD"),
+          ].join(" "),
+        })
+      .then(console.log)
       ;
     };
     const onAuth = () => {
@@ -283,6 +293,7 @@ class ImportButton extends React.PureComponent {
         window.gapi &&
         window.gapi.auth2 &&
         window.gapi.auth2.getAuthInstance &&
+        window.gapi.auth2.getAuthInstance() &&
         window.gapi.auth2.getAuthInstance().isSignedIn.listen(updateSigninStatus) &&
         window.gapi.auth2.getAuthInstance().signIn()
       )
@@ -305,6 +316,7 @@ class ImportButton extends React.PureComponent {
 const g_isSignedIn = () => window.gapi
   && window.gapi.auth2
   && window.gapi.auth2.getAuthInstance
+  && window.gapi.auth2.getAuthInstance()
   && window.gapi.auth2.getAuthInstance().isSignedIn.get()
 ;
 
@@ -329,6 +341,7 @@ class ImportForm extends React.PureComponent {
         window.gapi &&
         window.gapi.auth2 &&
         window.gapi.auth2.getAuthInstance &&
+        window.gapi.auth2.getAuthInstance() &&
         window.gapi.auth2.getAuthInstance().isSignedIn.get()
       )
       .then(is_signed_in => this.setState({ is_signed_in }))
@@ -371,7 +384,7 @@ class ImportForm extends React.PureComponent {
       });
     };
     return React.createElement(Row, {}, [
-      React.createElement(Col, { key: 0, xs: 12        }, React.createElement(ImportButton, { is_signed_in, updateSigninStatus })),
+      React.createElement(Col, { key: 0, xs: 12        }, React.createElement(ImportButton, { after, before, is_signed_in, updateSigninStatus })),
       React.createElement(Col, { key: 1, xs: 12, lg: 6 }, React.createElement(ImportAfter,  { value: after,  onAfterChange  } )),
       React.createElement(Col, { key: 2, xs: 12, lg: 6 }, React.createElement(ImportBefore, { value: before, onBeforeChange } )),
       React.createElement(Col, { key: 3, xs: 12, lg: 6 }, React.createElement(GApiAvailable)),

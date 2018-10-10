@@ -276,7 +276,9 @@ const getGmailAsync = ({id}) => {
   ;
 };
 
-const save2gmailIndexedDB = ({Date, From, Subject, result, includeSpamTrash}) => {
+const parseDate = text => Date.parse(text);
+
+const save2gmailIndexedDB = ({Date, From, Subject, To, result, includeSpamTrash}) => {
   return new Promise(opened => {
     const request = indexedDB.open("gmail", commonVersion);
     request.onsuccess = opened;
@@ -287,10 +289,12 @@ const save2gmailIndexedDB = ({Date, From, Subject, result, includeSpamTrash}) =>
     const db = target && target.result;
     const transaction = db && db.transaction && db.transaction("messages", "readwrite");
     const store = transaction && transaction.objectStore && transaction.objectStore("messages");
+    const parsedDate = parseDate(Date);
     const request = Date && From && Subject && store.put({
-      Date,
+      Date: parsedDate,
       From,
       Subject,
+      To,
       result,
       includeSpamTrash,
     });
@@ -325,6 +329,7 @@ const saveGmail2indexedDB = ({response, includeSpamTrash}) => {
     Date,
     From,
     Subject,
+    To,
     result,
     includeSpamTrash,
   });

@@ -261,6 +261,75 @@ class ImportReset extends React.PureComponent {
   }
 }
 
+const getGmailAsync = ({id}) => {
+  return window.gapi
+    && id
+    && window.gapi.client
+    && window.gapi.client.gmail
+    && window.gapi.client.gmail.users
+    && window.gapi.client.gmail.users.messages
+    && window.gapi.client.gmail.users.messages.get
+    && window.gapi.client.gmail.users.messages.get({
+      userId: "me",
+      id,
+    })
+  ;
+};
+
+const save2gmailIndexedDB = ({Date, From, Subject, result, includeSpamTrash}) => {
+  return new Promise(opened => {
+    const request = indexedDB.open("gmail", commonVersion);
+    request.onsuccess = opened;
+    request.onerror   = opened;
+  })
+  .then(event => {
+    const target = event && event.target;
+    const db = target && target.result;
+    const transaction = db && db.transaction && db.transaction("messages", "readwrite");
+    const store = transaction && transaction.objectStore && transaction.objectStore("messages");
+    const request = Date && From && Subject && store.put({
+      Date,
+      From,
+      Subject,
+      result,
+      includeSpamTrash,
+    });
+    return new Promise(saved => {
+      (request || {}).onsuccess = saved;
+      (request || {}).onerror   = saved;
+      return !request && saved();
+    });
+  });
+  ;
+};
+
+const saveGmail2indexedDB = ({response, includeSpamTrash}) => {
+  const { result } = response || {};
+  const { payload } = result || {};
+  const { headers } = payload || {};
+  const headerMap = {};
+  (headers || []).forEach(header => {
+    const {
+      name,
+      value,
+    } = header || {};
+    headerMap[name] = value;
+  });
+  const {
+    To,
+    From,
+    Date,
+    Subject,
+  } = headerMap;
+  return save2gmailIndexedDB({
+    Date,
+    From,
+    Subject,
+    result,
+    includeSpamTrash,
+  });
+};
+
 class ImportButton extends React.PureComponent {
   render(){
     const {
@@ -268,6 +337,7 @@ class ImportButton extends React.PureComponent {
       updateSigninStatus,
       after,
       before,
+      includeSpamTrash,
     } = this.props;
     const onClick = () => {
       return window.gapi
@@ -278,13 +348,38 @@ class ImportButton extends React.PureComponent {
         && window.gapi.client.gmail.users.messages.list
         && window.gapi.client.gmail.users.messages.list({
           userId: "me",
-          maxResults: 10,
+          //maxResults: 3,
+          includeSpamTrash,
           q: [
             "before:" + before.format("YYYY/MM/DD"),
             "after:"  +  after.format("YYYY/MM/DD"),
           ].join(" "),
         })
-      .then(console.log)
+      .then(response => response && response.result)
+      .then(result => {
+        const {
+          messages,
+          nextPageToken,
+          resultSizeEstimate,
+        } = result || {};
+        const iterator = messages && messages.length && messages[Symbol.iterator]();
+        return new Promise(iterated => {
+          const mails = [];
+          const loop = () => {
+            const next = iterator && iterator.next && iterator.next();
+            if(! next) return iterated(mails);
+            if(next.done) return iterated(mails);
+            const { value } = next || {};
+            const { id } = value || {};
+            return getGmailAsync({id, includeSpamTrash})
+            .then(response => saveGmail2indexedDB({response, includeSpamTrash}))
+            .then(loop)
+            ;
+          };
+          loop();
+        })
+        ;
+      })
       ;
     };
     const onAuth = () => {
@@ -383,8 +478,11 @@ class ImportForm extends React.PureComponent {
         client_set: !! getGmailClientId(),
       });
     };
+
+    const includeSpamTrash = true;
+
     return React.createElement(Row, {}, [
-      React.createElement(Col, { key: 0, xs: 12        }, React.createElement(ImportButton, { after, before, is_signed_in, updateSigninStatus })),
+      React.createElement(Col, { key: 0, xs: 12        }, React.createElement(ImportButton, { after, before, is_signed_in, updateSigninStatus, includeSpamTrash })),
       React.createElement(Col, { key: 1, xs: 12, lg: 6 }, React.createElement(ImportAfter,  { value: after,  onAfterChange  } )),
       React.createElement(Col, { key: 2, xs: 12, lg: 6 }, React.createElement(ImportBefore, { value: before, onBeforeChange } )),
       React.createElement(Col, { key: 3, xs: 12, lg: 6 }, React.createElement(GApiAvailable)),
